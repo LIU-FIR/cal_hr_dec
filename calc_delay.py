@@ -51,6 +51,16 @@ tdly_p_sat = wdly_p_sat/CSPEED
 # Format dlys into fixed-point word
 
 #%%
+year=2009
+month = 6
+day =19
+hour = 18
+minute = 0
+second = 0
+
+jd1 = tp.cal_jd(year, month, day, hour, minute, second)
+tp.ut2gst(1980,4,22,14,36,51.67)
+tp.gst2lst(4.668119,-64)
 #deg=(tdly_p[0]-tdly_p[1])*1000/1024*189*360*1e6
 #print(deg)
 #print(np.remainder(deg,-360))

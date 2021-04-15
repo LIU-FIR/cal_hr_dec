@@ -158,6 +158,42 @@ def cal_jd(year, month, day, hour, minute, second):
     JD = math.floor(365.25*(Y + 4716)) + math.floor(30.6001*(M+1)) + D + Bz - 1524.5    
     return JD
 
+def ut2gst(year, month, day, hour, minute, second):
+    """
+    根据UT计算GST
+    输入：year,month,day(Greenwich date), hour,minute,second(UT).
+    输出：以hour为单位
+    """    
+    JD = cal_jd(year, month, day, 0, 0, 0)
+    S = JD-2451545
+    T = S/36525
+    T0 = 6.697374558 + (2400.051336*T) + (0.000025862*T**2)
+    T0 = T0 % 24
+    UT = (second/60+minute)/60+hour
+    A = UT*1.002737909
+    GST = (A+T0) % 24
+    return GST
+
+def gst2lst(gst,local_lon):
+    """
+    根据GST计算LST
+    输入：GST(以hour为单位), local_lon(以度为单位)
+    输出：LST(以hour为单位)
+    """    
+    LST = (gst+local_lon/15) % 24
+    return LST
+
+def ra2ha(ra,lst):
+    """
+    根据ra(right ascension)计算hour angle
+    输入：ra(以hour为单位), lst(以度为单位)
+    输出：LST(以hour为单位)
+    """    
+    ha = lst - ra
+    if ha<0:
+        ha = ha +24
+    return ha
+
 def azalt2hadec(az,alt,lat):
     """
     已知方位角、俯仰角和观测者纬度，计算时角和赤纬
