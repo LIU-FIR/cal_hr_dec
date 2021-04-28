@@ -6,7 +6,7 @@ Created on Wed Apr 14 10:28:45 2021
 空间频率分量[u,v,w]的计算
 延时的计算
 
-@author: admin
+@author: LIU FEI
 """
 
 import numpy as np
@@ -14,6 +14,7 @@ from numpy import pi
 #from JD_cal import cal_jd
 import math
 CSPEED = 299792000.
+#dT = 68 #67 seconds used in 2017.
 #%%
 ## Load variables
 L0_tab = np.load('L0.npy')
@@ -32,7 +33,12 @@ R4_tab = np.load('R4.npy')
 TA43 = np.load('TA43.npy')
 museri_ant_pos = np.load('museri_ant_pos.npy')
 
-def sun_hrdec(JD,dT,lon,lat,ele):
+def sun_hrdec(JD,lon,lat,ele,dT=68):
+    """
+    计算太阳的指向：时角-赤纬
+    输入：year,month, day, hour,minute,second.
+    输出： hour-angle(小时)，declination(角度)
+    """        
 ##   Step1: JD, JDE, JC, JCE, JME    
     JDE = JD + dT/86400
     JC = (JD - 2451545)/36525
@@ -126,7 +132,8 @@ def sun_hrdec(JD,dT,lon,lat,ele):
     H_deg = VU + lon - ALP
     HF = math.modf(H_deg/360)[0]
     H = 360*HF if H_deg>=0 else 360+360*HF
-    
+
+    return (H,DELT)    
 #    ## Step 12: ALP_pl (the topocentric sun right ascension, in degrees)
 #    XI = 8.794/(3600*R) # in degrees
 #    u = math.atan(0.99664719*math.tan(lat*pi/180)) # in radians
@@ -141,7 +148,7 @@ def sun_hrdec(JD,dT,lon,lat,ele):
 #
 #    ## Step 13: H_pl (the topocentric local hour angle, in degrees)                         
 #    H_pl = H- dALP
-    return (H,DELT)
+
 #    return (H_pl, DELT_pl)    
 #%%
 def cal_jd(year, month, day, hour, minute, second):
@@ -158,21 +165,55 @@ def cal_jd(year, month, day, hour, minute, second):
     JD = math.floor(365.25*(Y + 4716)) + math.floor(30.6001*(M+1)) + D + Bz - 1524.5    
     return JD
 
-def ut2gst(year, month, day, hour, minute, second):
+def ut2gst(year, month, day, hour, minute, second,dT=68):
     """
     根据UT计算GST
     输入：year,month,day(Greenwich date), hour,minute,second(UT).
     输出：以hour为单位
     """    
-    JD = cal_jd(year, month, day, 0, 0, 0)
-    S = JD-2451545
-    T = S/36525
-    T0 = 6.697374558 + (2400.051336*T) + (0.000025862*T**2)
-    T0 = T0 % 24
-    UT = (second/60+minute)/60+hour
-    A = UT*1.002737909
-    GST = (A+T0) % 24
-    return GST
+    JD = cal_jd(year, month, day, hour, minute, second)
+    JDE = JD + dT/86400
+    JC = (JD - 2451545)/36525
+    JCE = (JDE-2451545)/36525
+    JME = JCE/10  
+    # X0:The mean elongation of the moon from the sun (in degrees)
+    X0 = 297.85036 + 445267.111480*JCE - 0.0019142*JCE**2 + JCE**3/189474
+    # X1: the mean anomaly of the sun (in degrees)
+    X1 = 357.52772 + 35999.050340*JCE - 0.0001603*JCE**2 - JCE**3/300000
+    # X2: the mean anomaly of the moon (in degrees)
+    X2 = 134.96298 + 477198.867398*JCE + 0.0086972*JCE**2 +JCE**3/56250
+    # X3: the moon's argument of latitude (in degrees)
+    X3 = 93.27191 + 483202.017538*JCE - 0.0036825*JCE**2 + JCE**3/327270
+    # X4: the longitude of the ascending node of the moon's mean orbit on the ecliptic,measured from the mean equinox of the date (in degrees)
+    X4 = 125.04452 - 1934.136261*JCE + 0.0020708*JCE**2 + JCE**3/450000
+    Xv = np.array([X0,X1,X2,X3,X4])*pi/180
+    dPSI = np.sum((TA43[0:63,5:6]+TA43[0:63,6:7]*JCE).reshape(63,)*np.sin(np.matmul(TA43[0:63,0:5],Xv)))/36000000 #in degrees
+    dEPS = np.sum((TA43[0:63,7:8]+TA43[0:63,8:9]*JCE).reshape(63,)*np.cos(np.matmul(TA43[0:63,0:5],Xv)))/36000000 #in degrees
+
+    U = JME/10
+    EPS0 = 84381.448 - 4680.93*U - 1.55*U**2 + 1999.25*U**3 - \
+        51.38*U**4 - 249.67*U**5 - 39.05*U**6 + 7.12*U**7 + \
+        27.87*U**8 + 5.79*U**9 + 2.45*U**10
+    EPS = EPS0/3600 + dEPS   
+   
+    ## Step 8: VU (the apparent sidereal time at Greenwich at any given time: in degrees)
+    VU0_deg = 280.46061837 + 360.98564736629*(JD-2451545) + \
+            0.000387933*JC**2 - JC**3/38710000
+    VU0F = math.modf(VU0_deg/360)[0]
+    VU0 = 360*VU0F if VU0_deg>=0 else 360+360*VU0F # in degrees
+    VU = VU0 + dPSI*math.cos(EPS*pi/180)    
+    gst = VU % 24
+    return gst
+#   以下计算版本：Practical Astronomy with your Calculator or Spreadsheet by Duffett-Smith P., Zwart J
+#    JD = cal_jd(year, month, day, 0, 0, 0)
+#    S = JD-2451545
+#    T = S/36525
+#    T0 = 6.697374558 + (2400.051336*T) + (0.000025862*T**2)
+#    T0 = T0 % 24
+#    UT = (second/60+minute)/60+hour
+#    A = UT*1.002737909
+#    GST = (A+T0) % 24
+#    return GST
 
 def gst2lst(gst,local_lon):
     """

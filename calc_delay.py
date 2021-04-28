@@ -6,7 +6,7 @@ Created on Fri Aug 10 16:04:16 2018
 """
 import numpy as np
 import trackingpy as tp
-import math
+#import math
 CSPEED = 299792000.
 
 
@@ -23,7 +23,7 @@ second = 39#30
 lon_mos = 115.2505#-105.1786 # in degrees
 lat_mos = 42.2118#39.742476 # in degrees
 ele_mos = 1365#1830.14 # in meters
-dT = 68 #67 seconds used in 2017.
+
 el_sat=38.11 # 卫星的俯仰角
 az_sat=195.42 #卫星的方位角
 delt_sat = 15 # 卫星的赤纬
@@ -31,7 +31,7 @@ delt_sat = 15 # 卫星的赤纬
 
 jd = tp.cal_jd(year,month,day,hour,minute,second)
 dxyzs = tp.museri_ant_pos
-ha_sun,dec_sun = tp.sun_hrdec(jd,dT,lon_mos,lat_mos,ele_mos) # 计算太阳的时角和赤纬
+ha_sun,dec_sun = tp.sun_hrdec(jd,lon_mos,lat_mos,ele_mos) # 计算太阳的时角和赤纬
 LXYZs = tp.enu2ecef(lat_mos,lon_mos,dxyzs)
 
 wdly_sun = tp.wdly_cal(ha_sun,dec_sun,LXYZs)# 
