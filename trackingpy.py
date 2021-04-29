@@ -202,9 +202,15 @@ def ut2gst(year, month, day, hour, minute, second,dT=68):
     VU0F = math.modf(VU0_deg/360)[0]
     VU0 = 360*VU0F if VU0_deg>=0 else 360+360*VU0F # in degrees
     VU = VU0 + dPSI*math.cos(EPS*pi/180)    
-    gst = VU % 24
+    gst = (VU/15) % 24
     return gst
+
 #   以下计算版本：Practical Astronomy with your Calculator or Spreadsheet by Duffett-Smith P., Zwart J
+#def ut2gst1(year, month, day, hour, minute, second):
+#    """
+#    根据UT计算GST
+#    以下计算版本：Practical Astronomy with your Calculator or Spreadsheet
+#    """        
 #    JD = cal_jd(year, month, day, 0, 0, 0)
 #    S = JD-2451545
 #    T = S/36525
